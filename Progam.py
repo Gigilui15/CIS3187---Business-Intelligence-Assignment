@@ -16,21 +16,19 @@ training_data = pd.read_csv('C:\\Users\\luigi\\Desktop\\Third Year\\Business Int
 # Loading the testing dataset
 testing_data = pd.read_csv('C:\\Users\\luigi\\Desktop\\Third Year\\Business Intelligence\\testing20.csv')
 
-# Sigmoid function for the hidden and output layer neurons
-def sigmoid(x):
-    # Use the clip function to avoid overflow issues
-    x = np.clip(x, -500, 500)
-    return 1 / (1 + np.exp(-x))
-
-
-# Sigmoid derivative to be used in Error Backpropagation formula: error * sigmoid_derivative
-def sigmoid_derivative(x):
-    return x * (1 - x)
-
 # Softmax function for the output layer
 def softmax(x):
     exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
     return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+
+# Sigmoid function for the hidden and output layer neurons
+def sigmoid(x):
+    x = np.clip(x, -500, 500)
+    return 1 / (1 + np.exp(-x))
+
+# Sigmoid derivative to be used in Error Backpropagation formula: error * sigmoid_derivative
+def sigmoid_derivative(x):
+    return x * (1 - x)
 
 #loading the training inputs (120x4)
 inputs = training_data.iloc[:, :-3].values
@@ -40,74 +38,76 @@ outputs = training_data.iloc[:, -3:].values
 #Hyperparameters
 learning_rate = 0.2
 error_threshold = 0.2
-epochs = 1000
+epochs = 10000
 input_layer_size = 4
 hidden_layer_size = 4
 output_layer_size = 3
 
 #Seeding for reproducability
+# Seeding for reproducibility
 np.random.seed(10)
 
-#Generating random weights for the input layer (4x4)
-input_weights = np.random.uniform(size=(input_layer_size,hidden_layer_size))
-#Generating random weights for the hidden layer (4x3)
+# Generating random weights for the input layer (4x4)
+input_weights = np.random.uniform(size=(input_layer_size, hidden_layer_size))
+# Generating random weights for the hidden layer (4x3)
 hidden_weights = np.random.uniform(size=(hidden_layer_size, output_layer_size))
 
 facts = []
 
 def forward_propagation(inputs, input_weights, hidden_weights):
-    # Calculate values for the hidden layer
     hidden_layer_input = np.dot(inputs, input_weights)
     hidden_layer_output = sigmoid(hidden_layer_input)
 
-    # Calculate values for the output layer
     output_layer_input = np.dot(hidden_layer_output, hidden_weights)
-    output_layer_output = sigmoid(output_layer_input)
+    output_layer_output = softmax(output_layer_input)
     return hidden_layer_output, output_layer_output
 
-def backpropagation(inputs, input_weights, hidden_weights, output_layer_output, error):
-    #Output Layer Weights
-    delta_output = error * sigmoid_derivative(output_layer_output)
+def backpropagation(inputs, input_weights, hidden_weights, output_layer_output, outputs):
+    delta_output = (output_layer_output - outputs) / len(inputs)
     hidden_weights += learning_rate * np.dot(hidden_layer_output.T, delta_output)
-    #Hidden Layer Weights
+    
     delta_hidden = sigmoid_derivative(hidden_layer_output) * np.dot(delta_output, hidden_weights.T)
     input_weights += learning_rate * np.dot(inputs.T, delta_hidden)
-    
+
     return hidden_weights, input_weights
 
-#Training loop with forward and backward propagation
+# Loading the training inputs (120x4)
+inputs = training_data.iloc[:, :-3].values
+# Loading the training answers
+outputs = training_data.iloc[:, -3:].values
+
+# Training loop with forward and backward propagation
 for epoch in range(epochs):
-    # Run Feed Forward Propagation
     hidden_layer_output, output_layer_output = forward_propagation(inputs, input_weights, hidden_weights)
-    
-    #Checking for Bad Facts to perform Backpropagation
-    #Includes Error Calculation and Saving of Good & Bad Facts in a CSV
+
     epoch_facts = []
-    
-    # Calculate the error [120 x 3] using crossentropy
-    error = outputs - softmax(output_layer_output)
+    correct_predictions = 0
+
+    error = outputs - output_layer_output
 
     for i in range(len(inputs)):
-        # Check if all errors are within the threshold
-        if np.all(error[i] <= error_threshold):
-            status = "Good Fact"
+        
+        if np.any(error < error_threshold):
+            status = 'Good Fact'
         else:
-            status = "Bad Fact"
-            # Run Backpropagation
-            hidden_weights, input_weights = backpropagation(inputs, input_weights, hidden_weights, output_layer_output, error)
-            fact = {
-                'Epoch No:': epoch + 1,
-                'Index:': i,
-                'Expected Output:': outputs[i],
-                'Actual Output:': output_layer_output[i],
-                'Error:': error[i],
-                'Fact:': status
-            }
-            epoch_facts.append(fact)
+            status = 'Bad Fact'
+            hidden_weights, input_weights = backpropagation(inputs, input_weights, hidden_weights, output_layer_output, outputs)
 
-    # Append the facts for the current epoch to the main facts list
+        fact = {
+            'Epoch No:': epoch + 1,
+            'Index:': i,
+            'Expected Output:': outputs[i],
+            'Actual Output:': output_layer_output[i],
+            'Error:': error,
+            'Status: ': status
+        }
+        epoch_facts.append(fact)
+
+    accuracy = correct_predictions / len(inputs)
+
     facts.append(epoch_facts)
 
 facts_df = pd.DataFrame([fact for epoch_facts in facts for fact in epoch_facts])
-facts_df.to_csv('C:\\Users\\luigi\\Desktop\\Third Year\\Business Intelligence\\Model Results\\Allfacts.csv', index=False) 
+facts_df.to_csv('C:\\Users\\luigi\\Desktop\\Third Year\\Business Intelligence\\Model Results\\Allfacts.csv', index=False)
+
 print("Done")

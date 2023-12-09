@@ -56,7 +56,7 @@ outputs = training_data.iloc[:, -3:].values
 #Hyperparameters
 learning_rate = 0.25
 error_threshold = 0.2
-epochs = 100000
+epochs = 10000
 input_layer_size = 4
 hidden_layer_size = 4
 output_layer_size = 3
@@ -74,17 +74,13 @@ for epoch in range(epochs):
     print("Epoch: ", epoch + 1)
     bad_facts_count = 0 
     for example in range(len(inputs)):
-        #print("\nFit: ", example + 1)
+
         fit = inputs[example].reshape(1, -1)
         hidden_layer_output, output_layer_output = forward_propagation(fit, input_weights, hidden_weights)
-        #print("Output", output_layer_output)
-        error = outputs[example] - output_layer_output
-        #print("Ans", outputs[example].reshape(1, -1))
-        #print("Error", error)
 
-        # Check if any element in the error array exceeds the threshold
+        error = outputs[example] - output_layer_output
+
         if any(abs(e) > error_threshold for e in error[0]):
-            #print("Backpropagation")
             hidden_weights, input_weights = backpropagation(fit, input_weights, hidden_weights, output_layer_output, outputs[example], hidden_layer_output)
             bad_facts_count += 1  
 

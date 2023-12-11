@@ -70,18 +70,24 @@ def training_Accuracy(epoch, bad_facts_count, total_examples):
     
 def testing_Accuracy(inputs, outputs, input_weights, hidden_weights):
     correct_predictions = 0
-
+    print("\nTesting using unseen data:\n" )
     for example in range(len(inputs)):
         fit = inputs[example].reshape(1, -1)
         _, output_layer_output = forward_propagation(fit, input_weights, hidden_weights, dropout_rate)
         predicted_class = np.argmax(output_layer_output)
         true_class = np.argmax(outputs[example])
 
-        if predicted_class == true_class:
+        is_correct = predicted_class == true_class
+
+        # Print id, expected outputs, predicted outputs, and correctness
+        print(f"ID: {example + 1} | Expected: {outputs[example]} | Predicted: {output_layer_output[0]} | Correct: {is_correct}")
+
+        if is_correct:
             correct_predictions += 1
 
     accuracy = (correct_predictions / len(inputs)) * 100
     print(f"\nTesting Accuracy: {accuracy:.2f}%")
+
     
 #loading the training inputs
 inputs = training_data.iloc[:, :-3].values
@@ -96,10 +102,13 @@ input_layer_size = 4
 hidden_layer_size = 4
 output_layer_size = 3
 dropout_rate = 0
+#For Testing Different seeds
 seed_range = [1,10,21,23,30, 91]
 
 for seed in seed_range:
     print(f"\nUsing seed {seed}:")
+    
+    allFacts = []
     
     # Seeding for reproducibility
     np.random.seed(seed)
@@ -119,7 +128,19 @@ for seed in seed_range:
             if any(abs(e) > error_threshold for e in error[0]):
                 hidden_weights, input_weights = backpropagation(fit, input_weights, hidden_weights, output_layer_output, outputs[example], hidden_layer_output, dropout_rate)
                 bad_facts_count += 1
+                status = "Bad Fact"  
+            else:
+                status = "Good Fact"
 
+            fact = {
+                'Epoch': epoch + 1,
+                'Index': example + 1,
+                'Expected Output': outputs[example],
+                'Output': output_layer_output[0],  
+                'Status': status
+            }
+            allFacts.append(fact)
+        
         training_Accuracy(epoch, bad_facts_count, len(inputs))
 
         # Check if bad facts occurred, and break if not
@@ -127,6 +148,18 @@ for seed in seed_range:
             print("\nNo bad facts in the last epoch. Stopping training.")
             print(f"Found seed {seed} with 100% accuracy.")
             break
+
+    # Convert the list of facts to a DataFrame
+    facts_df = pd.DataFrame(allFacts)
+
+    # Create the "facts" folder if it doesn't exist
+    facts_folder = 'facts'
+    os.makedirs(facts_folder, exist_ok=True)
+
+    # Save the DataFrame as a CSV file inside the "facts" folder
+    facts_filename = f'facts_seed_{seed}.csv'
+    facts_df.to_csv(os.path.join(facts_folder, facts_filename), index=False)
+
     # Save weights after training
     with open(os.path.join(weights_folder, f'weights_seed_{seed}.pkl'), 'wb') as file:
         weights_dict = {'input_weights': input_weights, 'hidden_weights': hidden_weights}

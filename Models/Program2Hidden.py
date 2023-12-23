@@ -39,7 +39,7 @@ def softmax(x):
     return exp_x / np.sum(exp_x, axis=1, keepdims=True)
 
 # Define forward propagation function
-def forward_propagation(fit, input_weights, hidden_weights1, hidden_weights2, dropout_rate):
+def forward_propagation(fit, input_weights, hidden_weights1, hidden_weights2, dropout_rate, seed):
     # Calculate first hidden layer input and output
     hidden_layer1_input = np.dot(fit, input_weights)
     hidden_layer1_output = sigmoid(hidden_layer1_input)
@@ -90,7 +90,7 @@ def dropout(x, dropout_rate):
         return x
 
 # Define training accuracy function to display accuracy during training
-def training_Accuracy(epoch, bad_facts_count, total_examples, ax, update_frequency):
+def training_Accuracy(epoch, bad_facts_count, total_examples, ax, update_frequency,seed):
     accuracy = ((total_examples - bad_facts_count) / total_examples) * 100
     print(f"\rTraining the Model | Epoch: {epoch + 1} | Bad Facts: {bad_facts_count} | Accuracy: {accuracy:.2f}%", end="", flush=True)
 
@@ -100,18 +100,18 @@ def training_Accuracy(epoch, bad_facts_count, total_examples, ax, update_frequen
     if epoch % update_frequency == 0 or epoch == epochs - 1:
         ax.clear()
         ax.plot(epoch_list, bad_facts_list, 'bo-')
-        ax.set_title('Bad Facts vs Epochs')
+        ax.set_title(f'Bad Facts vs Epochs (Seed {seed})')
         ax.set_xlabel('Epochs')
         ax.set_ylabel('Bad Facts')
         plt.pause(0.1)  
 
 # Define testing accuracy function to evaluate accuracy on unseen data
-def testing_Accuracy(inputs, outputs, input_weights, hidden_weights1, hidden_weights2, dropout_rate):
+def testing_Accuracy(inputs, outputs, input_weights, hidden_weights1, hidden_weights2, dropout_rate, seed):
     correct_predictions = 0
     print("\nTesting using unseen data:\n")
     for example in range(len(inputs)):
         fit = inputs[example].reshape(1, -1)
-        _, _, output_layer_output = forward_propagation(fit, input_weights, hidden_weights1, hidden_weights2, dropout_rate)
+        _, _, output_layer_output = forward_propagation(fit, input_weights, hidden_weights1, hidden_weights2, dropout_rate, seed)
         predicted_class = np.argmax(output_layer_output)
         true_class = np.argmax(outputs[example])
 
@@ -143,10 +143,10 @@ dropout_rate = 0
 # For testing different seeds. Tested [1,10,21,23,30,91]
 seed_range = [23]
 
-# Set the update frequency for the graph (higher because it takes longer to train due to the higher complexity)
-update_frequency = 75
+# Set the update frequency for the graph 
+update_frequency = 100
 
-# Loop through different seeds for reproducibility
+# Loop through different seeds
 for seed in seed_range:
     print(f"\nUsing seed {seed}:")
     
@@ -164,7 +164,7 @@ for seed in seed_range:
     # Generate random weights for the second hidden layer (4x3)
     hidden_weights2 = np.random.uniform(size=(hidden_layer2_size, output_layer_size))
 
-    # Initialize the plot
+    # Initialize the plot outside the training loop
     plt.ion()
     fig, ax = plt.subplots()
 
@@ -173,7 +173,7 @@ for seed in seed_range:
         bad_facts_count = 0
         for example in range(len(inputs)):
             fit = inputs[example].reshape(1, -1)
-            hidden_layer1_output, hidden_layer2_output, output_layer_output = forward_propagation(fit, input_weights, hidden_weights1, hidden_weights2, dropout_rate)
+            hidden_layer1_output, hidden_layer2_output, output_layer_output = forward_propagation(fit, input_weights, hidden_weights1, hidden_weights2, dropout_rate, seed)
             error = outputs[example] - output_layer_output
 
             # Update weights if error exceeds the threshold
@@ -193,7 +193,7 @@ for seed in seed_range:
             }
             allFacts.append(fact)
         
-        training_Accuracy(epoch, bad_facts_count, len(inputs), ax, update_frequency)
+        training_Accuracy(epoch, bad_facts_count, len(inputs), ax, update_frequency, seed)
 
         # Check if bad facts occurred, and break if not
         if bad_facts_count == 0:
@@ -218,4 +218,7 @@ for seed in seed_range:
         pickle.dump(weights_dict, file)
 
     # Evaluate testing accuracy
-    testing_Accuracy(testing_data.iloc[:, :-3].values, testing_data.iloc[:, -3:].values, input_weights, hidden_weights1, hidden_weights2, dropout_rate)
+    testing_Accuracy(testing_data.iloc[:, :-3].values, testing_data.iloc[:, -3:].values, input_weights, hidden_weights1, hidden_weights2, dropout_rate, seed)
+
+# Display the final plots for all seeds
+plt.show(block=True)

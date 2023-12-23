@@ -1,8 +1,8 @@
-# Import necessary libraries
 import numpy as np
 import pandas as pd
 import pickle
 import os
+import matplotlib.pyplot as plt
 
 # Load the dataset with no headers
 dataset = pd.read_csv('C:\\Users\\luigi\\Desktop\\Third Year\\Business Intelligence\\IrisDataset.csv')
@@ -103,6 +103,12 @@ def testing_Accuracy(inputs, outputs, input_weights, hidden_weights):
     accuracy = (correct_predictions / len(inputs)) * 100
     print(f"\nTesting Accuracy: {accuracy:.2f}%")
 
+# Initialize the plot
+plt.ion()
+fig, ax = plt.subplots()
+epoch_list = []
+bad_facts_list = []
+
 # Load the training inputs
 inputs = training_data.iloc[:, :-3].values
 # Load the training answers
@@ -158,29 +164,46 @@ for seed in seed_range:
             }
             allFacts.append(fact)
         
+        # Update the training accuracy and plot
         training_Accuracy(epoch, bad_facts_count, len(inputs))
 
-        # Check if bad facts occurred, and break if not
-        if bad_facts_count == 0:
-            print("\nNo bad facts in the last epoch. Stopping training.")
-            print(f"Found seed {seed} with 100% accuracy.")
-            break
+        # Update the plot with the total number of bad facts for the current epoch
+        epoch_list.append(epoch + 1)
+        bad_facts_list.append(bad_facts_count)
+        
+    # Display the final plot after all epochs for the current seed
+    ax.clear()
+    ax.plot(epoch_list, bad_facts_list, 'bo-')
+    ax.set_title('Bad Facts vs Epochs')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('Bad Facts')
+    plt.pause(0.1)  # Adjust the pause duration as needed
 
-    # Convert the list of facts to a DataFrame
-    facts_df = pd.DataFrame(allFacts)
+    # Check if bad facts occurred, and break if not
+    if bad_facts_count == 0:
+        print("\nNo bad facts in the last epoch. Stopping training.")
+        print(f"Found seed {seed} with 100% accuracy.")
+        break
 
-    # Create the "facts" folder if it doesn't exist
-    facts_folder = 'facts'
-    os.makedirs(facts_folder, exist_ok=True)
+# Display the final plot after all seeds
+plt.ioff()
+plt.show()
 
-    # Save the DataFrame as a CSV file inside the "facts" folder
-    facts_filename = f'facts_seed_{seed}.csv'
-    facts_df.to_csv(os.path.join(facts_folder, facts_filename), index=False)
+# Convert the list of facts to a DataFrame
+facts_df = pd.DataFrame(allFacts)
 
-    # Save weights after training
-    with open(os.path.join(weights_folder, f'weights_seed_{seed}.pkl'), 'wb') as file:
-        weights_dict = {'input_weights': input_weights, 'hidden_weights': hidden_weights}
-        pickle.dump(weights_dict, file)
+# Create the "facts" folder if it doesn't exist
+facts_folder = 'facts'
+os.makedirs(facts_folder, exist_ok=True)
 
-    # Evaluate testing accuracy
-    testing_Accuracy(testing_data.iloc[:, :-3].values, testing_data.iloc[:, -3:].values, input_weights, hidden_weights)
+# Save the DataFrame as a CSV file inside the "facts" folder
+facts_filename = f'facts_seed_{seed}.csv'
+facts_df.to_csv(os.path.join(facts_folder, facts_filename), index=False)
+
+# Save weights after training
+with open(os.path.join(weights_folder, f'weights_seed_{seed}.pkl'), 'wb') as file:
+    weights_dict = {'input_weights': input_weights, 'hidden_weights': hidden_weights}
+    pickle.dump(weights_dict, file)
+
+# Evaluate testing accuracy
+testing_Accuracy(testing_data.iloc[:, :-3].values, testing_data.iloc[:, -3:].values, input_weights, hidden_weights)

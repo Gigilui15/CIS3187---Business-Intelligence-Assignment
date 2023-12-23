@@ -125,6 +125,9 @@ dropout_rate = 0
 # For testing different seeds. Tested with [1,10,21,23,30,91]
 seed_range = [10]
 
+#For real-time graph plotting not to lag
+update_frequency = 10
+
 # Loop through different seeds for reproducibility
 for seed in seed_range:
     print(f"\nUsing seed {seed}:")
@@ -139,6 +142,7 @@ for seed in seed_range:
     # Generate random weights for the hidden layer (4x3)
     hidden_weights = np.random.uniform(size=(hidden_layer_size, output_layer_size))
 
+    # Training loop
     # Training loop
     for epoch in range(epochs):
         bad_facts_count = 0
@@ -164,26 +168,19 @@ for seed in seed_range:
             }
             allFacts.append(fact)
         
-        # Update the training accuracy and plot
+        # Update the training accuracy
         training_Accuracy(epoch, bad_facts_count, len(inputs))
 
-        # Update the plot with the total number of bad facts for the current epoch
-        epoch_list.append(epoch + 1)
-        bad_facts_list.append(bad_facts_count)
-        
-    # Display the final plot after all epochs for the current seed
-    ax.clear()
-    ax.plot(epoch_list, bad_facts_list, 'bo-')
-    ax.set_title('Bad Facts vs Epochs')
-    ax.set_xlabel('Epochs')
-    ax.set_ylabel('Bad Facts')
-    plt.pause(0.1)  # Adjust the pause duration as needed
-
-    # Check if bad facts occurred, and break if not
-    if bad_facts_count == 0:
-        print("\nNo bad facts in the last epoch. Stopping training.")
-        print(f"Found seed {seed} with 100% accuracy.")
-        break
+        # Update the plot every 50 epochs with the total number of bad facts for the current epoch
+        if epoch % update_frequency == 0 or epoch == epochs - 1:
+            epoch_list.append(epoch + 1)
+            bad_facts_list.append(bad_facts_count)
+            ax.clear()
+            ax.plot(epoch_list, bad_facts_list, 'bo-')
+            ax.set_title('Bad Facts vs Epochs')
+            ax.set_xlabel('Epochs')
+            ax.set_ylabel('Bad Facts')
+            plt.pause(0.1) 
 
 # Display the final plot after all seeds
 plt.ioff()

@@ -1,8 +1,8 @@
-# Import necessary libraries
 import numpy as np
 import pandas as pd
 import pickle
 import os
+import matplotlib.pyplot as plt
 
 # Load the dataset with no headers
 dataset = pd.read_csv('C:\\Users\\luigi\\Desktop\\Third Year\\Business Intelligence\\IrisDataset.csv')
@@ -90,9 +90,20 @@ def dropout(x, dropout_rate):
         return x
 
 # Define training accuracy function to display accuracy during training
-def training_Accuracy(epoch, bad_facts_count, total_examples):
+def training_Accuracy(epoch, bad_facts_count, total_examples, ax, update_frequency):
     accuracy = ((total_examples - bad_facts_count) / total_examples) * 100
     print(f"\rTraining the Model | Epoch: {epoch + 1} | Bad Facts: {bad_facts_count} | Accuracy: {accuracy:.2f}%", end="", flush=True)
+
+    # Update the plot with the total number of bad facts for the current epoch
+    epoch_list.append(epoch + 1)
+    bad_facts_list.append(bad_facts_count)
+    if epoch % update_frequency == 0 or epoch == epochs - 1:
+        ax.clear()
+        ax.plot(epoch_list, bad_facts_list, 'bo-')
+        ax.set_title('Bad Facts vs Epochs')
+        ax.set_xlabel('Epochs')
+        ax.set_ylabel('Bad Facts')
+        plt.pause(0.1)  
 
 # Define testing accuracy function to evaluate accuracy on unseen data
 def testing_Accuracy(inputs, outputs, input_weights, hidden_weights1, hidden_weights2, dropout_rate):
@@ -115,7 +126,6 @@ def testing_Accuracy(inputs, outputs, input_weights, hidden_weights1, hidden_wei
     accuracy = (correct_predictions / len(inputs)) * 100
     print(f"\nTesting Accuracy: {accuracy:.2f}%")
 
-
 # Load the training inputs
 inputs = training_data.iloc[:, :-3].values
 # Load the training answers
@@ -133,12 +143,17 @@ dropout_rate = 0
 # For testing different seeds. Tested [1,10,21,23,30,91]
 seed_range = [23]
 
+# Set the update frequency for the graph (higher because it takes longer to train due to the higher complexity)
+update_frequency = 75
+
 # Loop through different seeds for reproducibility
 for seed in seed_range:
     print(f"\nUsing seed {seed}:")
     
     allFacts = []
-    
+    epoch_list = []
+    bad_facts_list = []
+
     # Seed for reproducibility
     np.random.seed(seed)
 
@@ -148,6 +163,10 @@ for seed in seed_range:
     hidden_weights1 = np.random.uniform(size=(hidden_layer1_size, hidden_layer2_size))
     # Generate random weights for the second hidden layer (4x3)
     hidden_weights2 = np.random.uniform(size=(hidden_layer2_size, output_layer_size))
+
+    # Initialize the plot
+    plt.ion()
+    fig, ax = plt.subplots()
 
     # Training loop
     for epoch in range(epochs):
@@ -174,7 +193,7 @@ for seed in seed_range:
             }
             allFacts.append(fact)
         
-        training_Accuracy(epoch, bad_facts_count, len(inputs))
+        training_Accuracy(epoch, bad_facts_count, len(inputs), ax, update_frequency)
 
         # Check if bad facts occurred, and break if not
         if bad_facts_count == 0:
